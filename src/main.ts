@@ -9,6 +9,8 @@ const GITHUB_TOKEN: string = core.getInput("GITHUB_TOKEN");
 const OPENAI_API_KEY: string = core.getInput("OPENAI_API_KEY");
 const OPENAI_API_MODEL: string = core.getInput("OPENAI_API_MODEL");
 const EXTRA_INSTRUCTIONS: string = core.getInput("EXTRA_INSTRUCTIONS");
+const SEND_ALL_CHUNKS: string = core.getInput("SEND_ALL_CHUNKS");
+const SEND_CHUNKS_IN_FILE: string = core.getInput("SEND_CHUNKS_IN_FILE");
 
 const octokit = new Octokit({ auth: GITHUB_TOKEN });
 
@@ -63,10 +65,13 @@ async function analyzeCode(
 ): Promise<Array<{ body: string; path: string; line: number }>> {
   const comments: Array<{ body: string; path: string; line: number }> = [];
 
+  const allChunks = SEND_ALL_CHUNKS === "true" ? parsedDiff.flatMap((file) => file.chunks) : [];
+
   for (const file of parsedDiff) {
     if (file.to === "/dev/null") continue; // Ignore deleted files
+    const relevantChunks = SEND_CHUNKS_IN_FILE === "true" ? file.chunks : allChunks;
     for (const chunk of file.chunks) {
-      const prompt = createPrompt(file, chunk, prDetails);
+      const prompt = createPrompt(file, chunk, prDetails, relevantChunks);
       const aiResponse = await getAIResponse(prompt);
       if (aiResponse) {
         const newComments = createComment(file, chunk, aiResponse);
@@ -79,7 +84,12 @@ async function analyzeCode(
   return comments;
 }
 
-function createPrompt(file: File, chunk: Chunk, prDetails: PRDetails): string {
+function createPrompt(file: File, chunk: Chunk, prDetails: PRDetails, relevantChunks: Chunk[]): string {
+  const changes = (changes: parseDiff.Change[]) => changes
+    // @ts-expect-error - ln and ln2 exists where needed
+    .map((c) => `${c.ln ? c.ln : c.ln2} ${c.content}`)
+    .join("\n");
+
   return `Your task is to review pull requests. Instructions:
 - Provide the response in following JSON format:  {"reviews": [{"lineNumber":  <line_number>, "reviewComment": "<review comment>"}]}
 - Do not give positive comments or compliments.
@@ -100,14 +110,14 @@ Pull request description:
 ${prDetails.description}
 ---
 
+other diffs in this PR:
+${relevantChunks.map((c) => `\`\`\`diff\n${c.content}\n${changes(chunk.changes)}\n\`\`\``).join("\n")} 
+
 Git diff to review:
 
 \`\`\`diff
 ${chunk.content}
-${chunk.changes
-  // @ts-expect-error - ln and ln2 exists where needed
-  .map((c) => `${c.ln ? c.ln : c.ln2} ${c.content}`)
-  .join("\n")}
+${changes(chunk.changes)}
 \`\`\`
 `;
 }

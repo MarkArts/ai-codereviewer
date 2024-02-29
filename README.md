@@ -45,6 +45,9 @@ jobs:
           OPENAI_API_MODEL: "gpt-4" # Optional: defaults to "gpt-4"
           EXTRA_INSTRUCTIONS: "- never comment on file formatting and linting issues" # Optional: defaults to ""
           exclude: "**/*.json, **/*.md" # Optional: exclude patterns separated by commas
+          # !!!WARNING enabling the following options will exponentially increase the amount of tokens used in openAI!!!
+          SEND_ALL_CHUNKS: false # Optional: For each change put all other changes in this PR in the prompt to openAI
+          SEND_CHUNKS_IN_FILE: false # Optional: For each change put all other changes in the same file in the prompt to openAI
 ```
 
 4. Replace `your-username` with your GitHub username or organization name where the AI Code Reviewer repository is

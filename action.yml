@@ -15,6 +15,14 @@ inputs:
     description: "Extra instructions to be added to the text prompt."
     required: false
     default: ""
+  SEND_ALL_CHUNKS:
+    description: "For each change put all other changes in this PR in the prompt to openAI"
+    required: false
+    default: "false"
+  SEND_CHUNKS_IN_FILE:
+    description: "For each change put all other changes in the same file in the prompt to openAI"
+    required: false
+    default: "false"
   exclude:
     description: "Glob patterns to exclude files from the diff analysis"
     required: false
