@@ -211,12 +211,14 @@ async function main() {
   );
 
   if (eventData.action === "opened") {
+    console.log(`event: ${eventData.action}`)
     diff = await getDiff(
       prDetails.owner,
       prDetails.repo,
       prDetails.pull_number
     );
   } else if (eventData.action === "synchronize") {
+    console.log(`event: ${eventData.action}`)
     const newBaseSha = eventData.before;
     const newHeadSha = eventData.after;
 
@@ -242,6 +244,7 @@ async function main() {
   }
 
   const parsedDiff = parseDiff(diff);
+  console.log(`found ${parsedDiff.length} files in diff`)
 
   const excludePatterns = core
     .getInput("exclude")
@@ -253,6 +256,7 @@ async function main() {
       minimatch(file.to ?? "", pattern)
     );
   });
+  console.log(`${filteredDiff.length} files left after filtering`)
 
   const comments = await analyzeCode(filteredDiff, prDetails);
   if (comments.length > 0) {
@@ -262,6 +266,8 @@ async function main() {
       prDetails.pull_number,
       comments
     );
+  } else {
+    console.log("No comments to add");
   }
 }
 
