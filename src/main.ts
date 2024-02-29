@@ -4,6 +4,7 @@ import OpenAI from "openai";
 import { Octokit } from "@octokit/rest";
 import parseDiff, { Chunk, File } from "parse-diff";
 import minimatch from "minimatch";
+import { error } from "console";
 
 const GITHUB_TOKEN: string = core.getInput("GITHUB_TOKEN");
 const OPENAI_API_KEY: string = core.getInput("OPENAI_API_KEY");
@@ -118,12 +119,12 @@ Pull request description:
 ${prDetails.description}
 ---
 
-other diffs in this PR:
+Take in to consideration the following diffs but DO NOT create comments for them:
 ${relevantChunks
   .map((c) => `\`\`\`diff\n${c.content}\n${changes(chunk.changes)}\n\`\`\``)
-  .join("\n")} 
+  .join("\n")}
 
-Git diff to review:
+Git diff to review and create comments for:
 
 \`\`\`diff
 ${chunk.content}
@@ -211,14 +212,14 @@ async function main() {
   );
 
   if (eventData.action === "opened") {
-    console.log(`event: ${eventData.action}`)
+    console.log(`event: ${eventData.action}`);
     diff = await getDiff(
       prDetails.owner,
       prDetails.repo,
       prDetails.pull_number
     );
   } else if (eventData.action === "synchronize") {
-    console.log(`event: ${eventData.action}`)
+    console.log(`event: ${eventData.action}`);
     const newBaseSha = eventData.before;
     const newHeadSha = eventData.after;
 
@@ -244,7 +245,7 @@ async function main() {
   }
 
   const parsedDiff = parseDiff(diff);
-  console.log(`found ${parsedDiff.length} files in diff`)
+  console.log(`found ${parsedDiff.length} files in diff`);
 
   const excludePatterns = core
     .getInput("exclude")
@@ -256,7 +257,7 @@ async function main() {
       minimatch(file.to ?? "", pattern)
     );
   });
-  console.log(`${filteredDiff.length} files left after filtering`)
+  console.log(`${filteredDiff.length} files left after filtering`);
 
   const comments = await analyzeCode(filteredDiff, prDetails);
   if (comments.length > 0) {
